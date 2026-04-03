@@ -1,7 +1,8 @@
-
 name: Continuous Integration
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+
 on: [push]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -75,13 +76,8 @@ jobs:
       - name: Run Unit Tests
         run: cd backend && npm t
 
-
   static-analysis:
     needs: [build]
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    static-analysis:
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -115,7 +111,6 @@ jobs:
 
   security-audit:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -131,26 +126,4 @@ jobs:
         run: cd backend && npm ci
 
       - name: Check for security issues
-        run: cd backend && npm audit --audit-level=moderate
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: javascript
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 16.x
-
-      - name: Install Deps
-        run: cd backend && npm i
-
-      - name: Build
-        run: cd backend && npm run build
-
-      - name: Static Analysis
-        uses: github/codeql-action/analyze@v4
+        run: cd backend && npm audit --audit-level=moderate    
