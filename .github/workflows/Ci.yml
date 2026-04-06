@@ -126,4 +126,4 @@ jobs:
         run: cd backend && npm ci
 
       - name: Check for security issues
-        run: cd backend && npm audit --audit-level=moderate    
+        run: cd backend && npm audit --audit-level=moderate  
