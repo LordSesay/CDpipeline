@@ -1,0 +1,117 @@
+name: Backend
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+    branches:
+      - main
+      - l4
+
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+    branches:
+      - main
+      - l4
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache Node Modules
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: node-modules-cache
+      
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+    
+      - name: Install Deps
+        run: cd backend && npm i
+
+      - name: Store Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-artifact
+          path: backend/build/
+
+  lint:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Node Modules
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: node-modules-cache
+
+      - name: Install Dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cd backend && npm i
+
+      - name: Lint the code
+        run: cd backend && npm run lint
+    
+  test:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Node Modules
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: node-modules-cache
+
+      - name: Install Dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cd backend && npm i
+
+      - name: Run Unit Tests
+        run: cd backend && npm t
+
+  deploy_to_eb:
+    #if: github.ref == 'refs/heads/main'
+    needs: [lint,test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-artifact
+          path: backend/build
+
+      - name: Prepare Procfile
+        run: |
+          echo "web: node server.js" > backend/build/Procfile
+
+      - name: Prepare Zip File
+        run: cd backend/build && zip -r artifact.zip ./ -x '*.git*'
+
+      - name: Deploy to EB
+        id: deployment
+        uses: einaregilsson/beanstalk-deploy@v20
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: Sesay
+          environment_name: Sesay-env
+          version_label: Sesay-${{ github.run_number }}
+          region: us-east-1
+          deployment_package: backend/build/artifact.zip
